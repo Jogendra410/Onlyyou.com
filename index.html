@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Only You – Private Chat for Couples</title>
+
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Only You is a private chat platform made for couples to chat securely with only one person. Safe, simple, and made with love by Tech With AI.">
+    <meta name="keywords" content="private chat, couple chat, chat app, only you chat, Tech With AI, secure messaging, love chat, one person chat">
+    <meta name="author" content="Tech With AI">
+
+    <!-- For Social Media Preview -->
+    <meta property="og:title" content="Only You – Private Chat Website for Couples">
+    <meta property="og:description" content="A secure and private chat site made just for couples. Talk with only one person, made with love by Tech With AI.">
+    <meta property="og:image" content="https://yourwebsite.com/yourposter.jpg">
+    <meta property="og:url" content="https://yourwebsite.com">
+    <meta name="twitter:card" content="summary_large_image">
+
+    <!-- Favicon -->
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+
+    <!-- Styles and Libraries -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #ffeef8 0%, #ffe0f0 50%, #ffd6e8 100%);
+            min-height: 100vh;
+        }
+        .heart-beat {
+            animation: heartbeat 1.5s ease-in-out infinite;
+        }
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            14% { transform: scale(1.1); }
+            28% { transform: scale(1); }
+            42% { transform: scale(1.1); }
+            70% { transform: scale(1); }
+        }
+        .message-bubble {
+            max-width: 75%;
+            word-wrap: break-word;
+        }
+        .floating-hearts {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+        .floating-heart {
+            position: absolute;
+            font-size: 20px;
+            color: rgba(255, 182, 193, 0.3);
+            animation: float 6s ease-in-out infinite;
+        }
+        @keyframes float {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-100px) rotate(360deg); opacity: 0; }
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .hidden { display: none !important; }
+        .diary-card {
+            background: rgba(255, 248, 220, 0.9);
+            border-left: 4px solid #ff69b4;
+        }
+        .couple-bob {
+            animation: couple-bob-anim 3s ease-in-out infinite;
+        }
+        @keyframes couple-bob-anim {
+            0%, 100% { transform: translateY(0) rotate(-1deg); }
+            50% { transform: translateY(-8px) rotate(1deg); }
+        }
+    </style>
+</head>
+<body class="gradient-bg">
+    <div class="floating-hearts" id="floating-hearts"></div>
+    
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="fixed inset-0 bg-gradient-to-br from-pink-100 to-pink-200 flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="heart-beat text-6xl mb-4">💕</div>
+            <h1 class="text-2xl font-bold text-pink-800 mb-2">Only You</h1>
+            <p class="text-pink-600">Loading your love space...</p>
+        </div>
+    </div>
+
+    <!-- Update Modal -->
+    <div id="update-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-lg max-w-sm mx-4">
+            <div class="text-center">
+                <div class="text-4xl mb-4">💝</div>
+                <h3 class="text-xl font-bold mb-2" id="update-title">New Update Available!</h3>
+                <p class="text-gray-600 mb-4" id="update-description">Bug fixes and improvements</p>
+                <div class="flex space-x-2">
+                    <button id="update-now" class="bg-pink-500 text-white px-4 py-2 rounded-lg flex-1">Update Now</button>
+                    <button id="skip-update" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg flex-1">Skip</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Screen -->
+    <div id="auth-screen" class="container mx-auto px-4 py-8">
+        <div class="max-w-md mx-auto">
+            <div class="text-center mb-8">
+                <div class="heart-beat text-6xl mb-4">💕</div>
+                <h1 class="text-3xl font-bold text-pink-800 mb-2">Only You</h1>
+                <p class="text-pink-600">A private space for two hearts</p>
+            </div>
+            
+            <div class="glass-card rounded-lg p-6">
+                <div class="mb-4">
+                    <div class="relative">
+                        <i class="fas fa-envelope absolute left-3 top-3 text-pink-500"></i>
+                        <input type="email" id="email" placeholder="Email" class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <div class="relative">
+                        <i class="fas fa-lock absolute left-3 top-3 text-pink-500"></i>
+                        <input type="password" id="password" placeholder="Password" class="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+                    </div>
+                </div>
+                <button id="login-btn" class="w-full bg-pink-500 text-white py-3 rounded-lg mb-3 hover:bg-pink-600 transition"><i class="fas fa-sign-in-alt mr-2"></i>Login</button>
+                <button id="register-btn" class="w-full bg-purple-500 text-white py-3 rounded-lg hover:bg-purple-600 transition"><i class="fas fa-user-plus mr-2"></i>Register</button>
+                <div class="text-center mt-4"><a href="#" class="text-pink-500 text-sm">Forgot Password?</a></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Setup Screen -->
+    <div id="profile-screen" class="container mx-auto px-4 py-8 hidden">
+        <div class="max-w-md mx-auto">
+            <div class="text-center mb-8">
+                <div class="text-4xl mb-4">👫</div>
+                <h2 class="text-2xl font-bold text-pink-800 mb-2">Set Up Your Profile</h2>
+                <p class="text-pink-600">Let your partner know who you are</p>
+            </div>
+            <div class="glass-card rounded-lg p-6">
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nickname</label>
+                    <input type="text" id="nickname" placeholder="My Love ❤️" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Your UID</label>
+                    <div class="flex">
+                        <input type="text" id="user-uid" readonly class="flex-1 px-4 py-2 border rounded-l-lg bg-gray-50">
+                        <button id="copy-uid" class="bg-pink-500 text-white px-4 py-2 rounded-r-lg hover:bg-pink-600"><i class="fas fa-copy"></i></button>
+                    </div>
+                </div>
+                <button id="save-profile" class="w-full bg-pink-500 text-white py-3 rounded-lg hover:bg-pink-600 transition"><i class="fas fa-save mr-2"></i>Save Profile</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Partner Connect Screen -->
+    <div id="connect-screen" class="container mx-auto px-4 py-8 hidden">
+        <div class="max-w-md mx-auto">
+            <div class="text-center mb-8">
+                <div class="text-4xl mb-4">💌</div>
+                <h2 class="text-2xl font-bold text-pink-800 mb-2">Connect with Your Partner</h2>
+                <p class="text-pink-600">Enter your partner's UID to connect</p>
+            </div>
+            <div class="glass-card rounded-lg p-6 mb-6">
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Your UID</label>
+                    <div class="flex">
+                        <input type="text" id="display-uid" readonly class="flex-1 px-4 py-2 border rounded-l-lg bg-gray-50">
+                        <button id="copy-my-uid" class="bg-pink-500 text-white px-4 py-2 rounded-r-lg hover:bg-pink-600"><i class="fas fa-copy"></i></button>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Share this with your partner</p>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Partner's UID</label>
+                    <input type="text" id="partner-uid" placeholder="Enter partner's UID" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+                </div>
+                <button id="send-request" class="w-full bg-pink-500 text-white py-3 rounded-lg hover:bg-pink-600 transition"><i class="fas fa-heart mr-2"></i>Send Connection Request</button>
+            </div>
+            <div id="pending-requests" class="hidden">
+                <h3 class="text-lg font-semibold text-pink-800 mb-4">Pending Requests</h3>
+                <div id="requests-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Screen -->
+    <div id="main-screen" class="container mx-auto px-4 py-8 hidden">
+        <div class="max-w-md mx-auto">
+            <!-- Header with SVG Icon -->
+            <div class="text-center mb-10">
+                <div class="mb-4 couple-bob inline-block">
+                    <svg class="h-20 w-20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M11 14C11 15.1046 10.1046 16 9 16H5C3.89543 16 3 15.1046 3 14V13C3 10.2386 5.23858 8 8 8C10.7614 8 13 10.2386 13 13V14Z" fill="#fff1f2" stroke="#db2777" stroke-width="1.2"/>
+                        <circle cx="8" cy="5" r="3" fill="#fff1f2" stroke="#db2777" stroke-width="1.2"/>
+                        <path d="M19 14C19 15.1046 18.1046 16 17 16H13C11.8954 16 11 15.1046 11 14V13C11 10.2386 13.2386 8 16 8C18.7614 8 21 10.2386 21 13V14Z" fill="#fbcfe8" stroke="#db2777" stroke-width="1.2"/>
+                        <circle cx="16" cy="5" r="3" fill="#fbcfe8" stroke="#db2777" stroke-width="1.2"/>
+                    </svg>
+                </div>
+                <h2 class="text-3xl font-bold text-gray-800 mb-2">Welcome, <span id="user-nickname">Love</span></h2>
+                <p class="text-gray-600 text-md">This is your shared space with <span id="partner-nickname">Partner</span>. Choose what you want to do today.</p>
+            </div>
+            
+            <!-- Feature Selection Cards -->
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-white rounded-2xl p-5 text-center shadow-lg cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all" onclick="showScreen('chat-screen')">
+                        <div class="flex justify-center mb-2">
+                             <svg class="h-16 w-16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 21.9999C16.9706 21.9999 21 17.9705 21 12.9999C21 8.02933 16.9706 3.99991 12 3.99991C7.02944 3.99991 3 8.02933 3 12.9999C3 15.1116 3.73839 17.0627 5.00001 18.5713L4.02498 20.9749L6.42858 19.9999C7.81749 21.2842 9.80589 21.9999 12 21.9999Z" stroke="#fbcfe8" stroke-width="1.5" fill="#fff1f2"/><path d="M15.5 11.2499C15.5 9.80552 14.1941 8.78116 12.5 10.1546L12 10.5832L11.5 10.1546C9.80589 8.78116 8.5 9.80552 8.5 11.2499C8.5 12.4433 9.49999 13.2499 10.5 13.9999L12 15.2499L13.5 13.9999C14.5 13.2499 15.5 12.4433 15.5 11.2499Z" stroke="#f472b6" stroke-width="1.5" fill="#f9a8d4"/></svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-800">Love Chat</h3>
+                        <p class="text-gray-500 text-sm px-1">Chat privately and share your feelings</p>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 text-center shadow-lg cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all" onclick="showScreen('diary-screen')">
+                         <div class="flex justify-center mb-2">
+                            <svg class="h-16 w-16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 3H15C16.1046 3 17 3.89543 17 5V19C17 20.1046 16.1046 21 15 21H6C4.89543 21 4 20.1046 4 19V5C4 3.89543 4.89543 3 6 3Z" stroke="#fbcfe8" stroke-width="1.5" fill="#fff1f2"/><path d="M17 5V19" stroke="#fbcfe8" stroke-width="1.5"/><path d="M11.5 9.5C13.5 8.5 14.5 10.5 12.5 12.5L10.5 14.5L8.5 12.5C6.5 10.5 7.5 8.5 9.5 9.5L10.5 10.5L11.5 9.5Z" stroke="#f472b6" stroke-width="1.2" fill="#f9a8d4" transform="translate(-0.5, 0)"/></svg>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-800">Love Diary</h3>
+                        <p class="text-gray-500 text-sm px-1">Write about your shared memories and moments</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ad Placement Start -->
+            <div class="mt-8">
+                <script async="async" data-cfasync="false" src="//pl26730596.profitableratecpm.com/5a2b2b9ac58a54d1cd0ea8d24f99a49c/invoke.js"></script>
+                <div id="container-5a2b2b9ac58a54d1cd0ea8d24f99a49c"></div>
+            </div>
+            <!-- Ad Placement End -->
+
+            <div class="text-center mt-8">
+                <button id="logout-btn" class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition"><i class="fas fa-sign-out-alt mr-2"></i>Logout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Screen -->
+    <div id="chat-screen" class="flex flex-col h-screen hidden">
+        <div class="bg-pink-500 text-white p-4 flex items-center shadow-md">
+            <button onclick="showScreen('main-screen')" class="mr-4"><i class="fas fa-arrow-left"></i></button>
+            <div class="flex-1">
+                <h3 class="font-semibold" id="chat-partner-name">Partner</h3>
+                <p class="text-sm opacity-75">Online</p>
+            </div>
+        </div>
+        <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+        <div class="border-t p-4 bg-white">
+            <div class="flex items-center space-x-2">
+                <input type="text" id="message-input" placeholder="Type a message..." class="flex-1 px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-pink-500">
+                <button id="send-message" class="bg-pink-500 text-white w-10 h-10 flex items-center justify-center rounded-full hover:bg-pink-600 transition"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Diary Screen -->
+    <div id="diary-screen" class="flex flex-col h-screen hidden">
+        <div class="bg-purple-500 text-white p-4 flex items-center">
+            <button onclick="showScreen('main-screen')" class="mr-4"><i class="fas fa-arrow-left"></i></button>
+            <h3 class="text-lg font-semibold">Love Diary</h3>
+            <div class="flex-1"></div>
+            <button onclick="showAddDiary()" class="bg-purple-600 px-4 py-2 rounded-lg hover:bg-purple-700 transition"><i class="fas fa-plus mr-2"></i>Add Memory</button>
+        </div>
+        <div id="diary-entries" class="flex-1 overflow-y-auto p-4 space-y-4"></div>
+    </div>
+
+    <!-- Add Diary Modal -->
+    <div id="add-diary-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white p-6 rounded-lg max-w-md mx-4 w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-semibold">Add New Memory</h3>
+                <button onclick="hideAddDiary()" class="text-gray-500"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                    <input type="date" id="diary-date" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Memory</label>
+                    <textarea id="diary-text" placeholder="Describe your special moment..." class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 h-32"></textarea>
+                </div>
+                <button id="save-diary" class="w-full bg-purple-500 text-white py-3 rounded-lg hover:bg-purple-600 transition"><i class="fas fa-heart mr-2"></i>Save Memory</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+  apiKey: "AIzaSyBC5rsyjJuO5t-fednNAz_-4Kt66nJp6RI",
+  authDomain: "only-you-c0ea7.firebaseapp.com",
+  projectId: "only-you-c0ea7",
+  storageBucket: "only-you-c0ea7.firebasestorage.app",
+  messagingSenderId: "1034999710219",
+  appId: "1:1034999710219:web:0aae55538e34cc91817d0e",
+  measurementId: "G-92YP35KV46"
+};
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        let currentUser = null, partnerData = null, messagesListener = null, diaryListener = null;
+        const APP_VERSION = "1.0.0";
+
+        function showScreen(screenId) {
+            document.querySelectorAll('[id$="-screen"]').forEach(s => s.classList.add('hidden'));
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        function hideLoading() { document.getElementById('loading-screen').classList.add('hidden'); }
+
+        function createFloatingHearts() {
+            const c = document.getElementById('floating-hearts');
+            if (c.children.length > 20) return;
+            setInterval(() => {
+                const h = document.createElement('div');
+                h.className = 'floating-heart';
+                h.innerHTML = '💕';
+                h.style.left = Math.random() * 100 + '%';
+                h.style.animationDelay = Math.random() * 2 + 's';
+                c.appendChild(h);
+                setTimeout(() => h.remove(), 6000);
+            }, 3000);
+        }
+        
+        function copyTextToClipboard(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(() => alert('UID copied!')).catch(e => alert('Copy failed.'));
+            } else {
+                const t = document.createElement("textarea");
+                t.value = text; t.style.position = "fixed";
+                document.body.appendChild(t); t.focus(); t.select();
+                try { document.execCommand('copy'); alert('UID copied!'); } catch (e) { alert('Copy failed.'); }
+                document.body.removeChild(t);
+            }
+        }
+
+        async function login(e, p) { try { return (await auth.signInWithEmailAndPassword(e, p)).user; } catch (err) { alert('Login failed: ' + err.message); throw err; } }
+        async function register(e, p) { try { return (await auth.createUserWithEmailAndPassword(e, p)).user; } catch (err) { alert('Register failed: ' + err.message); throw err; } }
+        async function saveUserProfile(u, e, n) { await db.collection('Users').doc(u).set({ email: e, nickname: n, partnerUid: null, uid: u, createdAt: firebase.firestore.FieldValue.serverTimestamp() }); }
+        async function getUserData(u) { const d = await db.collection('Users').doc(u).get(); return d.exists ? d.data() : null; }
+
+        async function sendConnectionRequest(from, to) {
+            const pDoc = await db.collection('Users').doc(to).get();
+            if (!pDoc.exists) return alert('Partner not found.');
+            const fUser = await getUserData(from);
+            if (fUser.partnerUid) return alert('You are already connected.');
+            if (pDoc.data().partnerUid) return alert('This person is already connected.');
+            await db.collection('Requests').add({ from, to, status: 'pending', timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+            alert('Connection request sent!');
+        }
+
+        async function acceptRequest(rId, from, to) {
+            await db.collection('Requests').doc(rId).update({ status: 'accepted' });
+            await db.collection('Users').doc(from).update({ partnerUid: to });
+            await db.collection('Users').doc(to).update({ partnerUid: from });
+            const pId = [from, to].sort().join('_');
+            await db.collection('ConnectedPairs').doc(pId).set({ user1: from, user2: to, since: firebase.firestore.FieldValue.serverTimestamp() });
+            loadMainScreen();
+        }
+
+        async function rejectRequest(rId) { await db.collection('Requests').doc(rId).update({ status: 'rejected' }); loadPendingRequests(); }
+
+        async function loadPendingRequests() {
+            const q = await db.collection('Requests').where('to', '==', currentUser.uid).where('status', '==', 'pending').get();
+            const list = document.getElementById('requests-list'); list.innerHTML = '';
+            if (q.empty) return document.getElementById('pending-requests').classList.add('hidden');
+            document.getElementById('pending-requests').classList.remove('hidden');
+            for (const doc of q.docs) {
+                const req = doc.data(), fromUser = await getUserData(req.from), card = document.createElement('div');
+                card.className = 'glass-card rounded-lg p-4 mb-4';
+                card.innerHTML = `<div class="flex items-center justify-between"><div><h4 class="font-semibold text-pink-800">${fromUser.nickname}</h4><p class="text-sm text-gray-600">${fromUser.email}</p></div><div class="space-x-2"><button onclick="acceptRequest('${doc.id}', '${req.from}', '${req.to}')" class="bg-green-500 text-white px-4 py-2 rounded-lg"><i class="fas fa-check"></i></button><button onclick="rejectRequest('${doc.id}')" class="bg-red-500 text-white px-4 py-2 rounded-lg"><i class="fas fa-times"></i></button></div></div>`;
+                list.appendChild(card);
+            }
+        }
+        
+        async function sendMessage(msg) {
+            if (!msg.trim()) return;
+            const pId = [currentUser.uid, partnerData.uid].sort().join('_');
+            await db.collection('Messages').doc(pId).collection('messages').add({ type: 'text', message: msg, sender: currentUser.uid, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+        }
+
+        function listenToMessages() {
+            const pId = [currentUser.uid, partnerData.uid].sort().join('_');
+            messagesListener = db.collection('Messages').doc(pId).collection('messages').orderBy('timestamp').onSnapshot(snap => {
+                const cont = document.getElementById('chat-messages'); cont.innerHTML = '';
+                snap.forEach(doc => {
+                    const msg = doc.data(), div = document.createElement('div'), isOwn = msg.sender === currentUser.uid;
+                    div.className = `flex ${isOwn ? 'justify-end' : 'justify-start'}`;
+                    const content = `<div class="message-bubble ${isOwn ? 'bg-pink-500 text-white' : 'bg-white'} p-3 rounded-lg shadow">${msg.message}</div>`;
+                    div.innerHTML = content;
+                    cont.appendChild(div);
+                });
+                cont.scrollTop = cont.scrollHeight;
+            });
+        }
+
+        async function saveDiaryEntry(text, date) {
+            const pId = [currentUser.uid, partnerData.uid].sort().join('_');
+            await db.collection('Diaries').doc(pId).collection('entries').add({ 
+                text: text, 
+                date: date, 
+                createdBy: currentUser.uid, 
+                createdAt: firebase.firestore.FieldValue.serverTimestamp() 
+            });
+        }
+
+        function listenToDiaryEntries() {
+            const pId = [currentUser.uid, partnerData.uid].sort().join('_');
+            diaryListener = db.collection('Diaries').doc(pId).collection('entries').orderBy('date', 'desc').onSnapshot(snap => {
+                const cont = document.getElementById('diary-entries'); cont.innerHTML = '';
+                snap.forEach(doc => {
+                    const e = doc.data(), div = document.createElement('div');
+                    div.className = 'diary-card rounded-lg p-4 shadow';
+                    div.innerHTML = `<div class="flex justify-between items-start mb-2"><span class="text-sm font-semibold text-purple-800">${e.date}</span><span class="text-xs text-gray-500">by ${e.createdBy === currentUser.uid ? 'You' : partnerData.nickname}</span></div><p class="text-gray-800 mb-3">${e.text}</p>`;
+                    cont.appendChild(div);
+                });
+            });
+        }
+        
+        function showAddDiary() { 
+            document.getElementById('diary-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('add-diary-modal').classList.remove('hidden'); 
+        }
+
+        function hideAddDiary() { 
+            document.getElementById('add-diary-modal').classList.add('hidden'); 
+            document.getElementById('diary-text').value = '';
+        }
+        
+        async function loadMainScreen() {
+            const uData = await getUserData(currentUser.uid);
+            if (uData.partnerUid) {
+                partnerData = await getUserData(uData.partnerUid);
+                document.getElementById('user-nickname').textContent = uData.nickname;
+                document.getElementById('partner-nickname').textContent = partnerData.nickname;
+                document.getElementById('chat-partner-name').textContent = partnerData.nickname;
+                showScreen('main-screen');
+            } else {
+                document.getElementById('display-uid').value = currentUser.uid;
+                showScreen('connect-screen');
+                loadPendingRequests();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            createFloatingHearts();
+            auth.onAuthStateChanged(async (user) => {
+                hideLoading();
+                if (user) { currentUser = user; const uData = await getUserData(user.uid); if (!uData) { document.getElementById('user-uid').value = user.uid; showScreen('profile-screen'); } else { await loadMainScreen(); } } else { showScreen('auth-screen'); }
+            });
+            document.getElementById('login-btn').addEventListener('click', async () => { const e = document.getElementById('email').value, p = document.getElementById('password').value; if (e && p) await login(e, p); });
+            document.getElementById('register-btn').addEventListener('click', async () => { const e = document.getElementById('email').value, p = document.getElementById('password').value; if (e && p) await register(e, p); });
+            document.getElementById('save-profile').addEventListener('click', async () => { const n = document.getElementById('nickname').value; if (n) { await saveUserProfile(currentUser.uid, currentUser.email, n); await loadMainScreen(); } });
+            document.getElementById('copy-uid').addEventListener('click', () => copyTextToClipboard(document.getElementById('user-uid').value));
+            document.getElementById('copy-my-uid').addEventListener('click', () => copyTextToClipboard(document.getElementById('display-uid').value));
+            document.getElementById('send-request').addEventListener('click', async () => { const p = document.getElementById('partner-uid').value; if (p) await sendConnectionRequest(currentUser.uid, p); });
+            document.getElementById('send-message').addEventListener('click', () => { const i = document.getElementById('message-input'); if (i.value) { sendMessage(i.value.trim()); i.value = ''; } });
+            document.getElementById('message-input').addEventListener('keypress', (e) => { if (e.key === 'Enter') document.getElementById('send-message').click(); });
+            document.getElementById('save-diary').addEventListener('click', async () => { const t = document.getElementById('diary-text').value, d = document.getElementById('diary-date').value; if (t && d) { await saveDiaryEntry(t, d); hideAddDiary(); } });
+            document.getElementById('logout-btn').addEventListener('click', () => auth.signOut());
+            
+            const oShowScreen = window.showScreen;
+            window.showScreen = function(id) {
+                if (messagesListener && id !== 'chat-screen') { messagesListener(); messagesListener = null; }
+                if (diaryListener && id !== 'diary-screen') { diaryListener(); diaryListener = null; }
+                if (id === 'chat-screen' && partnerData) listenToMessages();
+                else if (id === 'diary-screen' && partnerData) listenToDiaryEntries();
+                oShowScreen(id);
+            };
+        });
+    </script>
+</body>
+</html>
